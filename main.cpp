@@ -11,7 +11,7 @@ public:
   std::map<K, V> m_map;
   // constructor associates whole range of K with val by inserting (K_min, val)
   // into the map
-  interval_map(V const &val) {
+  explicit interval_map(V const &val) {
     m_map.insert(m_map.end(),
                  std::make_pair(std::numeric_limits<K>::lowest(), val));
   }
