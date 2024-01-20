@@ -1,3 +1,5 @@
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
 #include <assert.h>
 #include <cstdlib>
 #include <ctime>
@@ -111,40 +113,224 @@ public:
   }
 };
 
+TEST_CASE("CanonicalConflicts") {
+  SECTION("BeginExtra with Mid") {
+    interval_map<int, char> m('A');
+    m.assign(1, 5, 'B');
+    m.assign(0, 3, 'C');
+    REQUIRE(m[0] == 'C');
+    REQUIRE(m[1] == 'C');
+    REQUIRE(m[2] == 'C');
+    REQUIRE(m[3] == 'B');
+    REQUIRE(m[4] == 'B');
+    REQUIRE(m[5] == 'A');
+  }
 
-int main(int argc, char* argv[])
-{
-  // TODO: test interval map with different stl algorithm methods
-  // TODO: make 4 spaces tab
-  // interval_map<ThinkCellKey<unsigned int>, char> imap {'a'};
-  interval_map<unsigned int, char> imap {'A'};
+  SECTION("Before-Mid with Mid (beginHasExtra==false)") {
+    interval_map<int, char> m('A');
+    m.assign(2, 5, 'B');
+    m.assign(0, 3, 'C');
+    REQUIRE(m[0] == 'C');
+    REQUIRE(m[1] == 'C');
+    REQUIRE(m[2] == 'C');
+    REQUIRE(m[3] == 'B');
+    REQUIRE(m[4] == 'B');
+    REQUIRE(m[5] == 'A');
+  }
 
-  // imap.assign(3, 5, 'B');
-  // imap.assign(5, 7, 'C');
-  // imap.assign(2, 7, 'D');
+  SECTION("Mid with EndExtra") {
+    interval_map<int, char> m('A');
+    m.assign(1, 5, 'B');
+    m.assign(3, 8, 'C');
+    REQUIRE(m[0] == 'A');
+    REQUIRE(m[1] == 'B');
+    REQUIRE(m[2] == 'B');
+    REQUIRE(m[3] == 'C');
+    REQUIRE(m[4] == 'C');
+    REQUIRE(m[5] == 'C');
+    REQUIRE(m[6] == 'C');
+    REQUIRE(m[7] == 'C');
+    REQUIRE(m[8] == 'A');
+  }
 
+  SECTION("Mid with After-Mid (endHasExtra==false)") {
+    interval_map<int, char> m('A');
+    m.assign(1, 4, 'B');
+    m.assign(6, 9, 'C');
+    REQUIRE(m[0] == 'A');
+    REQUIRE(m[1] == 'B');
+    REQUIRE(m[2] == 'B');
+    REQUIRE(m[3] == 'B');
+    REQUIRE(m[4] == 'A');
+    REQUIRE(m[5] == 'A');
+    REQUIRE(m[6] == 'C');
+    REQUIRE(m[7] == 'C');
+    REQUIRE(m[8] == 'C');
+    REQUIRE(m[9] == 'A');
+  }
+}
 
-  // imap.assign(8, 10, 'k');
+TEST_CASE("TrivialRange") {
+  interval_map<int, char> m('A');
+  m.assign(1, 10, 'B');
+  REQUIRE(m[0] == 'A');
+  for (int i = 1; i < 10; i++) {
+    REQUIRE(m[i] == 'B');
+  }
+  REQUIRE(m[10] == 'A');
+}
+TEST_CASE("TrivialTwoRange") {
+  interval_map<int, char> m('A');
+  m.assign(1, 3, 'B');
+  m.assign(6, 8, 'C');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'B');
+  REQUIRE(m[2] == 'B');
+  REQUIRE(m[3] == 'A');
+  REQUIRE(m[4] == 'A');
+  REQUIRE(m[5] == 'A');
+  REQUIRE(m[6] == 'C');
+  REQUIRE(m[7] == 'C');
+  REQUIRE(m[8] == 'A');
+}
+TEST_CASE("OverwriteLowest") {
+  interval_map<int, char> m('A');
+  m.assign(std::numeric_limits<int>::lowest(), 10000, 'B');
+  REQUIRE(m[0] == 'B');
+  REQUIRE(m[9999] == 'B');
+  REQUIRE(m[10000] == 'A');
+}
 
-  imap.assign(8, 12, 'k');
-	imap.assign(2, 12, 'k');
-	imap.assign(2, 12, 'b');
-	imap.assign(5, 12, 'b');
-	imap.assign(4, 10, 'b');
-	imap.assign(4, 12, 'b');
-	imap.assign(8, 13, 'a');
-  imap.assign(6, 9, 'j');
+TEST_CASE("Merge") {
+  interval_map<int, char> m('A');
+  m.assign(std::numeric_limits<int>::lowest(), 10, 'B');
+  m.assign(10, 20, 'B');
+  REQUIRE(m[0] == 'B');
+  REQUIRE(m[10] == 'B');
+  REQUIRE(m[19] == 'B');
+  REQUIRE(m[20] == 'A');
+}
 
+TEST_CASE("FloatKey") {
+  interval_map<float, char> m('A');
+  m.assign(1.00, 5.00, 'B');
 
-  // imap.assign(4, 4, 'j'); // its ok 
-	// imap.assign(0, 10, 'e');
-	// imap.assign(0, 10, 'e');
+  REQUIRE(m[0.0] == 'A');
+  REQUIRE(m[0.999999999] == 'B');
+  REQUIRE(m[1.0] == 'B');
+  REQUIRE(m[4.999] == 'B');
+  REQUIRE(m[5.0] == 'A');
+}
 
-  // imap.assign(2,6, 'B');
-  // imap.assign(3,10, 'C');
-  // imap.assign(4, 7, 'B');
-  // imap.assign(3, 5, 'B');
+TEST_CASE("OverlappingRangeComplete") {
+  interval_map<int, char> m('A');
+  m.assign(3, 5, 'B');
+  m.assign(1, 6, 'C');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'C');
+  REQUIRE(m[2] == 'C');
+  REQUIRE(m[3] == 'C');
+  REQUIRE(m[4] == 'C');
+  REQUIRE(m[5] == 'C');
+  REQUIRE(m[6] == 'A');
+}
 
-  imap.show();
-  return 0;
+TEST_CASE("OverlappingRangeInner") {
+  interval_map<int, char> m('A');
+  m.assign(1, 6, 'C');
+  m.assign(3, 5, 'B');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'C');
+  REQUIRE(m[2] == 'C');
+  REQUIRE(m[3] == 'B');
+  REQUIRE(m[4] == 'B');
+  REQUIRE(m[5] == 'C');
+  REQUIRE(m[6] == 'A');
+}
+
+TEST_CASE("OverlappingRangeSmallToLarge") {
+  interval_map<int, char> m('A');
+  m.assign(1, 5, 'B');
+  m.assign(3, 6, 'C');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'B');
+  REQUIRE(m[2] == 'B');
+  REQUIRE(m[3] == 'C');
+  REQUIRE(m[4] == 'C');
+  REQUIRE(m[5] == 'C');
+  REQUIRE(m[6] == 'A');
+}
+
+TEST_CASE("OverlappingRangeLargeToSmall") {
+  interval_map<int, char> m('A');
+  m.assign(3, 6, 'C');
+  m.assign(1, 5, 'B');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'B');
+  REQUIRE(m[2] == 'B');
+  REQUIRE(m[3] == 'B');
+  REQUIRE(m[4] == 'B');
+  REQUIRE(m[5] == 'C');
+  REQUIRE(m[6] == 'A');
+}
+
+TEST_CASE("ExtendingRangeBegin") {
+  interval_map<int, char> m('A');
+  m.assign(3, 5, 'B');
+  m.assign(1, 4, 'B');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'B');
+  REQUIRE(m[2] == 'B');
+  REQUIRE(m[3] == 'B');
+  REQUIRE(m[4] == 'B');
+  REQUIRE(m[5] == 'A');
+}
+
+TEST_CASE("ExtendingRangeEnd") {
+  interval_map<int, char> m('A');
+  m.assign(1, 5, 'B');
+  m.assign(3, 6, 'B');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'B');
+  REQUIRE(m[2] == 'B');
+  REQUIRE(m[3] == 'B');
+  REQUIRE(m[4] == 'B');
+  REQUIRE(m[5] == 'B');
+  REQUIRE(m[6] == 'A');
+}
+
+TEST_CASE("ExtendingRangeBothBeginEnd") {
+  interval_map<int, char> m('A');
+  m.assign(2, 3, 'B');
+  m.assign(1, 5, 'B');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'B');
+  REQUIRE(m[2] == 'B');
+  REQUIRE(m[3] == 'B');
+  REQUIRE(m[4] == 'B');
+  REQUIRE(m[5] == 'A');
+}
+
+TEST_CASE("OverwriteEndValueSafety") {
+  interval_map<int, char> m('A');
+  m.assign(2, 5, 'B');
+  m.assign(5, 8, 'C');
+  m.assign(4, 5, 'A');
+}
+
+TEST_CASE("ReusingExistingRangeBothBeginEnd") {
+  interval_map<int, char> m('A');
+  m.assign(1, 5, 'B');
+  m.assign(2, 3, 'B');
+  REQUIRE(m[0] == 'A');
+  REQUIRE(m[1] == 'B');
+  REQUIRE(m[2] == 'B');
+  REQUIRE(m[3] == 'B');
+  REQUIRE(m[4] == 'B');
+  REQUIRE(m[5] == 'A');
+}
+
+TEST_CASE("ReusingEnd") {
+  interval_map<int, char> m('A');
+  m.assign(1, 5, 'B');
 }
